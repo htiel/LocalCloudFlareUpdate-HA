@@ -93,11 +93,24 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
                 )
                 _LOGGER.debug("Records in %s: %s", zone["name"], records)
 
+                # Build a map of name -> all IPs currently in this zone
+                existing_ips_by_name: dict[str, set[str]] = {}
+                for record in records:
+                    existing_ips_by_name.setdefault(record["name"], set()).add(
+                        record["content"]
+                    )
+
                 stale = [
                     record
                     for record in records
                     if record["name"] in target_records
                     and record["content"] != location_info.ip
+                    # Skip if another record with the same name already has the target IP
+                    # (updating would create a duplicate and Cloudflare will reject it)
+                    and location_info.ip
+                    not in (
+                        existing_ips_by_name[record["name"]] - {record["content"]}
+                    )
                 ]
 
                 for record in stale:

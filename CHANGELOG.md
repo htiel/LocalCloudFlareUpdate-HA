@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.1.1] - 2026-03-26
+### Fixed
+- Skip updating a stale record if another record with the same name in the same zone already holds the target IP, preventing a Cloudflare "duplicate record" API error
+
 ## [1.1.0] - 2026-03-26
 ### Fixed
 - Improved exception handling in the update coordinator to catch and report all error types, not just Cloudflare API errors
