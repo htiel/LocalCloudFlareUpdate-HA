@@ -29,10 +29,13 @@ Extended and enhanced by [@Htiel](https://github.com/Htiel) with assistance from
 
 - Automatically detects your current public IPv4 address
 - Updates any number of Cloudflare DNS `A` records across one or more zones
-- Runs on a configurable interval (default: every 60 minutes)
+- Runs on a configurable poll interval (default: 60 minutes, minimum: 5 minutes)
 - Exposes a `cloudflare_ddns.update_records` service for instant manual updates from automations
-- Full **Configure** UI in HA — change your zones and records without reinstalling
+- Full **Configure** UI in HA — change zones, records, and poll interval without reinstalling
 - Supports API token re-authentication without losing your config
+- Automatically migrates config entries from the original single-zone schema
+- Skips duplicate updates — if the target IP already exists on a record name, no redundant API call is made
+- All entities grouped under a single **Cloudflare DDNS** device card in HA
 
 ---
 
@@ -67,19 +70,40 @@ To create a token: Cloudflare Dashboard → My Profile → API Tokens → Create
    - **Step 1 — API Token**: Enter your Cloudflare API token.
    - **Step 2 — Zones**: Select one or more of your Cloudflare zones (domains) to manage.
    - **Step 3 — Records**: Select the specific DNS `A` records within those zones to keep updated.
-4. The integration will immediately check and update any stale records, then poll every 60 minutes.
+4. The integration will immediately check and update any stale records, then poll on the configured interval (default 60 minutes).
 
 ---
 
-## Reconfiguring Zones / Records
+## Entities
 
-You can change your selected zones and records at any time without reinstalling:
+All entities appear under a single **Cloudflare DDNS** device card in **Settings → Devices & Services → Devices**.
+
+### Sensors
+
+| Entity | Description |
+|---|---|
+| **Last Sync** | Timestamp of the last successful sync attempt. Uses the `timestamp` device class so HA displays it as a formatted date/time. |
+| **Sync Status** | Text summary of the most recent sync result. Possible values: `Pending` (never run), `Up to date` (nothing needed changing), `X record(s) updated` (records were updated), `Failed` (an error occurred). Also exposes a `records_updated` attribute containing the integer count of records changed in the last run. |
+
+### Buttons
+
+| Entity | Description |
+|---|---|
+| **Sync Now** | Press to trigger an immediate DNS update outside of the normal poll interval. Equivalent to calling the `cloudflare_ddns.update_records` service. |
+
+---
+
+## Reconfiguring
+
+You can change your selected zones, records, or poll interval at any time without reinstalling:
 
 1. Go to **Settings → Devices & Services**.
 2. Find the **Cloudflare DDNS** card and click **Configure**.
-3. Update your zone and record selections and click **Submit**.
-
-The integration will reload automatically with the new settings.
+3. **Step 1** — Update your zone selection and/or poll interval (in minutes).
+   - Minimum interval: **5 minutes** (hard limit enforced in the UI).
+   - A warning is shown if you set the interval below **15 minutes**; submit again to confirm.
+4. **Step 2** — Update your DNS record selection.
+5. Click **Submit**. The integration reloads automatically with the new settings.
 
 ---
 
@@ -109,4 +133,8 @@ automation:
 | "invalid_auth" during setup | Your API token is incorrect or missing the required permissions. |
 | Records not updating | Confirm the record names match exactly what appears in your Cloudflare dashboard (e.g. `home.example.com`, not just `home`). |
 | Integration not appearing after install | Restart Home Assistant after installing via HACS. |
+| Sync Status stuck on "Pending" | The coordinator has not yet completed its first run. Wait for the first poll or press **Sync Now**. |
+| Sync Status shows "Failed" | Check **Settings → System → Logs** and filter by `cloudflare_ddns` for the underlying error message. |
+| "interval_too_low" error in Configure | The poll interval must be at least 5 minutes. |
+| Re-authentication prompt appears | Your API token has been revoked or its permissions changed. Go to **Settings → Devices & Services**, find the Cloudflare DDNS card, and follow the re-auth prompt to enter a new token without losing your zone/record config. |
 
