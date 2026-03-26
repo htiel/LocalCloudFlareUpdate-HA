@@ -1,4 +1,5 @@
 {
   "name": "Cloudflare DDNS",
-  "render_readme": true
+  "render_readme": true,
+  "icon": "https://raw.githubusercontent.com/Htiel/LocalCloudFlareUpdate-HA/main/custom_components/cloudflare_ddns/icon.png"
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.1] - 2026-03-26
+### Added
+- Cloudflare integration icon (`icon.png`) for HA integration card and HACS store
+
 ## [2.0.0] - 2026-03-26
 ### Changed
 - Version bump to 2.0.0 reflecting the significant feature additions over the original single-zone integration
