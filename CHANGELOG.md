@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.0] - 2026-03-26
+### Changed
+- Version bump to 2.0.0 reflecting the significant feature additions over the original single-zone integration
+- Added Apache 2.0 LICENSE and NOTICE files with full attribution to original Home Assistant Cloudflare integration authors
+
 ## [1.2.0] - 2026-03-26
 ### Added
 - **Sensor: Last Sync** — timestamp sensor showing when the last sync attempt ran
