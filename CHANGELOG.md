@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0] - 2026-03-26
+### Added
+- **Sensor: Last Sync** — timestamp sensor showing when the last sync attempt ran
+- **Sensor: Sync Status** — shows "Up to date", "X record(s) updated", "Failed", or "Pending"
+- **Button: Sync Now** — press to trigger an immediate DNS update from the HA dashboard
+- **Configurable poll interval** — set update frequency (in minutes) via the Configure dialog; minimum 5 minutes with a warning below 15
+- All new entities grouped under a single Cloudflare DDNS device card in HA
+
 ## [1.1.1] - 2026-03-26
 ### Fixed
 - Skip updating a stale record if another record with the same name in the same zone already holds the target IP, preventing a Cloudflare "duplicate record" API error

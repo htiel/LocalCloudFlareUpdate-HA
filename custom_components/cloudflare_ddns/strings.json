@@ -46,6 +46,8 @@
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "interval_too_low": "Interval must be at least 5 minutes.",
+      "interval_low_warning": "Warning: intervals below 15 minutes are not recommended and may impact performance. Submit again to confirm.",
       "no_zones_selected": "Please select at least one zone.",
       "no_records_selected": "Please select at least one record.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
@@ -53,7 +55,11 @@
     "step": {
       "init": {
         "data": {
-          "zones": "Zones"
+          "zones": "Zones",
+          "scan_interval": "Update interval (minutes)"
+        },
+        "data_description": {
+          "scan_interval": "How often to check and update DNS records. Minimum 5 minutes, recommended 15 or more."
         },
         "description": "Select which Cloudflare zones and DNS A records to keep updated with your current public IP.",
         "title": "Update zones and records"

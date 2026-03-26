@@ -16,7 +16,15 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONF_RECORDS, CONF_ZONES, DOMAIN
+from .const import (
+    CONF_RECORDS,
+    CONF_SCAN_INTERVAL,
+    CONF_ZONES,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+    MIN_UPDATE_INTERVAL,
+    WARN_UPDATE_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +33,29 @@ DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_API_TOKEN): str,
     }
 )
+
+
+def _options_init_schema(
+    zones: list[pycfdns.ZoneModel] | None = None,
+    current_zones: list[str] | None = None,
+    current_interval: int = DEFAULT_UPDATE_INTERVAL,
+) -> vol.Schema:
+    """Combined schema for options init step: zones + scan interval."""
+    zones_dict: dict[str, str] = {}
+    if zones is not None:
+        zones_dict = {zone["name"]: zone["name"] for zone in zones}
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_ZONES,
+                default=current_zones or [],
+            ): cv.multi_select(zones_dict),
+            vol.Required(
+                CONF_SCAN_INTERVAL,
+                default=current_interval,
+            ): vol.All(vol.Coerce(int), vol.Range(min=MIN_UPDATE_INTERVAL)),
+        }
+    )
 
 
 def _zones_schema(
@@ -235,23 +266,37 @@ class CloudflareOptionsFlowHandler(OptionsFlow):
         self.options: dict[str, Any] = {}
         self.available_zones: list[pycfdns.ZoneModel] | None = None
         self.available_records: list[pycfdns.RecordModel] | None = None
+        self._interval_warning_acknowledged: bool = False
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Show zone multi-select, pre-populated with the current selection."""
+        """Show zone multi-select and scan interval, pre-populated with current values."""
         errors: dict[str, str] = {}
 
         current_zones: list[str] = (
             self.config_entry.options.get(CONF_ZONES)
             or self.config_entry.data.get(CONF_ZONES, [])
         )
+        current_interval: int = int(
+            self.config_entry.options.get(CONF_SCAN_INTERVAL)
+            or self.config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+        )
 
         if user_input is not None:
             selected_zones: list[str] = user_input[CONF_ZONES]
+            interval: int = user_input[CONF_SCAN_INTERVAL]
+
             if not selected_zones:
                 errors[CONF_ZONES] = "no_zones_selected"
+            elif interval < MIN_UPDATE_INTERVAL:
+                errors[CONF_SCAN_INTERVAL] = "interval_too_low"
+            elif interval < WARN_UPDATE_INTERVAL and not self._interval_warning_acknowledged:
+                # Show a warning on first submit; allow on second submit
+                errors[CONF_SCAN_INTERVAL] = "interval_low_warning"
+                self._interval_warning_acknowledged = True
             else:
+                self._interval_warning_acknowledged = False
                 try:
                     self.available_records = await _fetch_records_for_zones(
                         self.hass,
@@ -280,7 +325,9 @@ class CloudflareOptionsFlowHandler(OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=_zones_schema(self.available_zones, current_zones),
+            data_schema=_options_init_schema(
+                self.available_zones, current_zones, current_interval
+            ),
             errors=errors,
         )
 

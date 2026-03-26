@@ -8,6 +8,8 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from .const import CONF_ZONES, DOMAIN, SERVICE_UPDATE_RECORDS
 from .coordinator import CloudflareConfigEntry, CloudflareCoordinator
 
+PLATFORMS = ["sensor", "button"]
+
 # Key used in v1 config entries (single zone string from homeassistant.const)
 _LEGACY_CONF_ZONE = "zone"
 
@@ -40,6 +42,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: CloudflareConfigEntry) -
 
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_RECORDS, update_records_service)
 
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 
@@ -52,5 +56,4 @@ async def _async_update_listener(
 
 async def async_unload_entry(hass: HomeAssistant, entry: CloudflareConfigEntry) -> bool:
     """Unload Cloudflare DDNS config entry."""
-
-    return True
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 from logging import getLogger
 import socket
 
@@ -15,10 +15,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 from homeassistant.util.location import async_detect_location_info
 from homeassistant.util.network import is_ipv4_address
 
-from .const import CONF_RECORDS, CONF_ZONES, DEFAULT_UPDATE_INTERVAL
+from .const import CONF_RECORDS, CONF_SCAN_INTERVAL, CONF_ZONES, DEFAULT_UPDATE_INTERVAL
 
 _LOGGER = getLogger(__name__)
 
@@ -36,13 +37,19 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
         self, hass: HomeAssistant, config_entry: CloudflareConfigEntry
     ) -> None:
         """Initialize an coordinator."""
+        interval: int = int(
+            config_entry.options.get(CONF_SCAN_INTERVAL)
+            or config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+        )
         super().__init__(
             hass,
             _LOGGER,
             config_entry=config_entry,
             name=config_entry.title,
-            update_interval=timedelta(minutes=DEFAULT_UPDATE_INTERVAL),
+            update_interval=timedelta(minutes=interval),
         )
+        self.last_sync_time: datetime | None = None
+        self.last_sync_records_updated: int = 0
 
     def _get_config_value(self, key: str, default=None):
         """Read a value from options first, falling back to data."""
@@ -134,11 +141,14 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
 
             if not update_tasks:
                 _LOGGER.debug("All target records are up to date")
-                return
+            else:
+                _LOGGER.debug("Submitting %d record update(s)", len(update_tasks))
+                await asyncio.gather(*update_tasks)
+                _LOGGER.debug("Update complete for all configured zones")
 
-            _LOGGER.debug("Submitting %d record update(s)", len(update_tasks))
-            await asyncio.gather(*update_tasks)
-            _LOGGER.debug("Update complete for all configured zones")
+            # Only reached on success — exceptions skip past here
+            self.last_sync_time = dt_util.utcnow()
+            self.last_sync_records_updated = len(update_tasks)
 
         except pycfdns.AuthenticationException as e:
             raise ConfigEntryAuthFailed from e
