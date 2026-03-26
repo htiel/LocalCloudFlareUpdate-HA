@@ -6,6 +6,25 @@ Unlike the built-in Cloudflare integration, this one supports **multiple zones a
 
 ---
 
+## Credits & Attribution
+
+This integration is based on the official **Home Assistant Cloudflare integration**:
+- Source: [github.com/home-assistant/core](https://github.com/home-assistant/core/tree/dev/homeassistant/components/cloudflare)
+- Documentation: [home-assistant.io/integrations/cloudflare](https://www.home-assistant.io/integrations/cloudflare)
+- Original authors: [@ludeeus](https://github.com/ludeeus) and [@ctalkington](https://github.com/ctalkington)
+
+The original work is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0). This project is a derivative work under the same license.
+
+Extended and enhanced by [@Htiel](https://github.com/Htiel) with assistance from **GitHub Copilot (Claude Sonnet)**, adding:
+- Multi-zone and multi-record support
+- In-UI reconfiguration via the Configure button (options flow)
+- Last sync timestamp and status sensors
+- Manual sync button entity
+- Configurable poll interval with low-interval warnings
+- Duplicate record safety checks
+
+---
+
 ## Features
 
 - Automatically detects your current public IPv4 address
