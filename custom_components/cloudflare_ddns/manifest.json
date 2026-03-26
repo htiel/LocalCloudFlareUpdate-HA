@@ -1,0 +1,13 @@
+{
+  "domain": "cloudflare_ddns",
+  "name": "Cloudflare DDNS",
+  "codeowners": ["@Htiel"],
+  "config_flow": true,
+  "documentation": "https://github.com/leithma/LocalCloudFlareUpdate-HA",
+  "integration_type": "service",
+  "iot_class": "cloud_push",
+  "loggers": ["pycfdns"],
+  "requirements": ["pycfdns==3.0.0"],
+  "single_config_entry": true,
+  "version": "1.0.0"
+}

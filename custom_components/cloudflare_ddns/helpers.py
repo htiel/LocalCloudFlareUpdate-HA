@@ -1,4 +1,4 @@
-"""Helpers for the CloudFlare integration."""
+"""Helpers for the Cloudflare DDNS integration."""
 
 import pycfdns
 

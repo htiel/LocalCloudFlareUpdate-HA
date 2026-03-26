@@ -10,7 +10,7 @@ import socket
 import pycfdns
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_API_TOKEN, CONF_ZONE
+from homeassistant.const import CONF_API_TOKEN
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -18,7 +18,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util.location import async_detect_location_info
 from homeassistant.util.network import is_ipv4_address
 
-from .const import CONF_RECORDS, DEFAULT_UPDATE_INTERVAL
+from .const import CONF_RECORDS, CONF_ZONES, DEFAULT_UPDATE_INTERVAL
 
 _LOGGER = getLogger(__name__)
 
@@ -26,11 +26,11 @@ type CloudflareConfigEntry = ConfigEntry[CloudflareCoordinator]
 
 
 class CloudflareCoordinator(DataUpdateCoordinator[None]):
-    """Coordinates records updates."""
+    """Coordinates records updates across one or more Cloudflare zones."""
 
     config_entry: CloudflareConfigEntry
     client: pycfdns.Client
-    zone: pycfdns.ZoneModel
+    zones: list[pycfdns.ZoneModel]
 
     def __init__(
         self, hass: HomeAssistant, config_entry: CloudflareConfigEntry
@@ -44,6 +44,12 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
             update_interval=timedelta(minutes=DEFAULT_UPDATE_INTERVAL),
         )
 
+    def _get_config_value(self, key: str, default=None):
+        """Read a value from options first, falling back to data."""
+        return self.config_entry.options.get(key) or self.config_entry.data.get(
+            key, default
+        )
+
     async def _async_setup(self) -> None:
         """Set up the coordinator."""
         self.client = pycfdns.Client(
@@ -51,28 +57,27 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
             client_session=async_get_clientsession(self.hass),
         )
 
+        configured_zone_names: list[str] = self._get_config_value(CONF_ZONES, [])
+
         try:
-            self.zone = next(
-                zone
-                for zone in await self.client.list_zones()
-                if zone["name"] == self.config_entry.data[CONF_ZONE]
-            )
+            all_zones = await self.client.list_zones()
+            self.zones = [
+                zone for zone in all_zones if zone["name"] in configured_zone_names
+            ]
+            if not self.zones:
+                raise UpdateFailed(
+                    f"None of the configured zones {configured_zone_names} were found"
+                )
         except pycfdns.AuthenticationException as e:
             raise ConfigEntryAuthFailed from e
         except pycfdns.ComunicationException as e:
             raise UpdateFailed("Error communicating with API") from e
 
     async def _async_update_data(self) -> None:
-        """Update records."""
-        _LOGGER.debug("Starting update for zone %s", self.zone["name"])
+        """Update records across all configured zones."""
+        target_records: list[str] = self._get_config_value(CONF_RECORDS, [])
+
         try:
-            records = await self.client.list_dns_records(
-                zone_id=self.zone["id"], type="A"
-            )
-            _LOGGER.debug("Records: %s", records)
-
-            target_records: list[str] = self.config_entry.data[CONF_RECORDS]
-
             location_info = await async_detect_location_info(
                 async_get_clientsession(self.hass, family=socket.AF_INET)
             )
@@ -80,37 +85,42 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
             if not location_info or not is_ipv4_address(location_info.ip):
                 raise UpdateFailed("Could not get external IPv4 address")
 
-            filtered_records = [
-                record
-                for record in records
-                if record["name"] in target_records
-                and record["content"] != location_info.ip
-            ]
+            update_tasks = []
+            for zone in self.zones:
+                _LOGGER.debug("Checking records in zone %s", zone["name"])
+                records = await self.client.list_dns_records(
+                    zone_id=zone["id"], type="A"
+                )
+                _LOGGER.debug("Records in %s: %s", zone["name"], records)
 
-            if len(filtered_records) == 0:
-                _LOGGER.debug("All target records are up to date")
-                return
+                stale = [
+                    record
+                    for record in records
+                    if record["name"] in target_records
+                    and record["content"] != location_info.ip
+                ]
 
-            await asyncio.gather(
-                *[
+                update_tasks.extend(
                     self.client.update_dns_record(
-                        zone_id=self.zone["id"],
+                        zone_id=zone["id"],
                         record_id=record["id"],
                         record_content=location_info.ip,
                         record_name=record["name"],
                         record_type=record["type"],
                         record_proxied=record["proxied"],
                     )
-                    for record in filtered_records
-                ]
-            )
+                    for record in stale
+                )
 
-            _LOGGER.debug("Update for zone %s is complete", self.zone["name"])
+            if not update_tasks:
+                _LOGGER.debug("All target records are up to date")
+                return
+
+            await asyncio.gather(*update_tasks)
+            _LOGGER.debug("Update complete for all configured zones")
 
         except (
             pycfdns.AuthenticationException,
             pycfdns.ComunicationException,
         ) as e:
-            raise UpdateFailed(
-                f"Error updating zone {self.config_entry.data[CONF_ZONE]}"
-            ) from e
+            raise UpdateFailed("Error updating DNS records") from e

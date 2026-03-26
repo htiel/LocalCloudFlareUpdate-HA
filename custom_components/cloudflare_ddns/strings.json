@@ -6,6 +6,8 @@
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "no_zones_selected": "Please select at least one zone.",
+      "no_records_selected": "Please select at least one record.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "flow_title": "{name}",
@@ -29,11 +31,38 @@
         "description": "This integration requires an API token created with Zone:Zone:Read and Zone:DNS:Edit permissions for all zones in your account.",
         "title": "Connect to Cloudflare"
       },
-      "zone": {
+      "zones": {
         "data": {
-          "zone": "Zone"
+          "zones": "Zones"
         },
-        "title": "Choose the zone to update"
+        "title": "Choose the zones to update"
+      }
+    }
+  },
+  "options": {
+    "abort": {
+      "cannot_connect": "[%key:common::config_flow::abort::cannot_connect%]"
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "no_zones_selected": "Please select at least one zone.",
+      "no_records_selected": "Please select at least one record.",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "step": {
+      "init": {
+        "data": {
+          "zones": "Zones"
+        },
+        "description": "Select which Cloudflare zones and DNS A records to keep updated with your current public IP.",
+        "title": "Update zones and records"
+      },
+      "records": {
+        "data": {
+          "records": "Records"
+        },
+        "title": "Choose the records to update"
       }
     }
   },

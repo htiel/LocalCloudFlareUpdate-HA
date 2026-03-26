@@ -1,4 +1,4 @@
-"""Config flow for Cloudflare integration."""
+"""Config flow for Cloudflare DDNS integration."""
 
 from __future__ import annotations
 
@@ -94,12 +94,12 @@ async def _fetch_records_for_zones(
 
 
 class CloudflareConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Cloudflare."""
+    """Handle a config flow for Cloudflare DDNS."""
 
     VERSION = 2
 
     def __init__(self) -> None:
-        """Initialize the Cloudflare config flow."""
+        """Initialize the Cloudflare DDNS config flow."""
         self.cloudflare_config: dict[str, Any] = {}
         self.zones: list[pycfdns.ZoneModel] | None = None
         self.records: list[pycfdns.RecordModel] | None = None
@@ -228,7 +228,7 @@ class CloudflareConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class CloudflareOptionsFlowHandler(OptionsFlow):
-    """Handle Cloudflare options — update zones and records without re-adding."""
+    """Handle Cloudflare DDNS options — update zones and records without re-adding."""
 
     def __init__(self) -> None:
         """Initialize options flow."""
