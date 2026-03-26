@@ -100,27 +100,38 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
                     and record["content"] != location_info.ip
                 ]
 
-                update_tasks.extend(
-                    self.client.update_dns_record(
-                        zone_id=zone["id"],
-                        record_id=record["id"],
-                        record_content=location_info.ip,
-                        record_name=record["name"],
-                        record_type=record["type"],
-                        record_proxied=record["proxied"],
+                for record in stale:
+                    _LOGGER.debug(
+                        "Queuing update for record %s in zone %s (current: %s -> new: %s)",
+                        record["name"],
+                        zone["name"],
+                        record["content"],
+                        location_info.ip,
                     )
-                    for record in stale
-                )
+                    update_tasks.append(
+                        self.client.update_dns_record(
+                            zone_id=zone["id"],
+                            record_id=record["id"],
+                            record_content=location_info.ip,
+                            record_name=record["name"],
+                            record_type=record["type"],
+                            record_proxied=record["proxied"],
+                        )
+                    )
 
             if not update_tasks:
                 _LOGGER.debug("All target records are up to date")
                 return
 
+            _LOGGER.debug("Submitting %d record update(s)", len(update_tasks))
             await asyncio.gather(*update_tasks)
             _LOGGER.debug("Update complete for all configured zones")
 
-        except (
-            pycfdns.AuthenticationException,
-            pycfdns.ComunicationException,
-        ) as e:
-            raise UpdateFailed("Error updating DNS records") from e
+        except pycfdns.AuthenticationException as e:
+            raise ConfigEntryAuthFailed from e
+        except pycfdns.ComunicationException as e:
+            raise UpdateFailed("Error communicating with Cloudflare API") from e
+        except UpdateFailed:
+            raise
+        except Exception as e:
+            raise UpdateFailed(f"Unexpected error updating DNS records: {e}") from e
