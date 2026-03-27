@@ -98,7 +98,7 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
                 records = await self.client.list_dns_records(
                     zone_id=zone["id"], type="A"
                 )
-                _LOGGER.debug("Records in %s: %s", zone["name"], records)
+                _LOGGER.debug("Found %d A record(s) in zone %s", len(records), zone["name"])
 
                 # Build a map of name -> all IPs currently in this zone
                 existing_ips_by_name: dict[str, set[str]] = {}
@@ -143,7 +143,10 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
                 _LOGGER.debug("All target records are up to date")
             else:
                 _LOGGER.debug("Submitting %d record update(s)", len(update_tasks))
-                await asyncio.gather(*update_tasks)
+                results = await asyncio.gather(*update_tasks, return_exceptions=True)
+                exceptions = [r for r in results if isinstance(r, BaseException)]
+                if exceptions:
+                    raise exceptions[0]
                 _LOGGER.debug("Update complete for all configured zones")
 
             # Only reached on success — exceptions skip past here
@@ -157,4 +160,4 @@ class CloudflareCoordinator(DataUpdateCoordinator[None]):
         except UpdateFailed:
             raise
         except Exception as e:
-            raise UpdateFailed(f"Unexpected error updating DNS records: {e}") from e
+            raise UpdateFailed("Unexpected error updating DNS records") from e

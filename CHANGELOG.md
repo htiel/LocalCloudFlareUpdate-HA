@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0] - 2026-03-26
+### Security
+- Strip and validate API token on entry (removes accidental whitespace before storage; rejects blank input)
+- Redacted full DNS record objects from debug logs to avoid exposing Cloudflare record IDs
+- Removed raw exception message from `UpdateFailed` to prevent API response bodies leaking into HA logs and the UI error banner
+- Replaced `asyncio.gather(*tasks)` with `return_exceptions=True` so all update tasks always run to completion before any exception is re-raised
+
 ## [2.0.1] - 2026-03-26
 ### Added
 - Cloudflare integration icon (`icon.png`) for HA integration card and HACS store

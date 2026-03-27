@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_API_TOKEN): str,
+        vol.Required(CONF_API_TOKEN): vol.All(str, str.strip, vol.Length(min=1)),
     }
 )
 
