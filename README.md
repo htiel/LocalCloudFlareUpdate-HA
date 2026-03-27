@@ -105,6 +105,15 @@ You can change your selected zones, records, or poll interval at any time withou
 4. **Step 2** — Update your DNS record selection.
 5. Click **Submit**. The integration reloads automatically with the new settings.
 
+### Adding a new record to track
+
+If you want to start managing a new DNS record that doesn't exist yet:
+
+1. In the **Cloudflare Dashboard**, go to your zone's **DNS** settings and add a new `A` record with any placeholder IP (e.g. `192.168.0.1`).
+2. Back in Home Assistant, go to **Settings → Devices & Services**, find the **Cloudflare DDNS** card, and click **Configure**.
+3. Work through the Configure steps and select the new record alongside your existing ones.
+4. Click **Submit** — the integration will immediately update the new record to your current public IP.
+
 ---
 
 ## Services
